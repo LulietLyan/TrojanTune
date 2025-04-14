@@ -36,7 +36,7 @@ tmpCsv.close()
 
 
 tokenizer = LlamaTokenizer.from_pretrained(args.model_path)
-model = LlamaForCausalLM.from_pretrained("/root/autodl-tmp/LESS/models/Llama-2-7b-hf", load_in_8bit=True, device_map='auto', torch_dtype=torch.float16)
+model = LlamaForCausalLM.from_pretrained("~/TargetedFinetuneForLLMAttack/models/Llama-3-8B", load_in_8bit=True, device_map='auto', torch_dtype=torch.float16)
 model = PeftModel.from_pretrained(model, args.model_path)
 
 # resize embeddings if needed (e.g. for LlamaTokenizer)
@@ -45,6 +45,7 @@ if len(tokenizer) > embedding_size:
     model.resize_token_embeddings(len(tokenizer))
 
 for idx in range(1, 521):
+    print("**************************************************", idx, "**************************************************")
     example_input = harmfulPrompt[idx][0]
     model_input = tokenizer(example_input, return_tensors="pt").to(device)
     model.eval()

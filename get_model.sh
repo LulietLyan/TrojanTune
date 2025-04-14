@@ -10,4 +10,4 @@ apt-get update
 apt-get install aria2
 apt-get install git-lfs
 clear
-bash hfd.sh ${MODEL_NAME} -x 8 --local-dir ./models/${DIR_NAME} --hf_token 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 --hf_username Soberrrrrr
+bash hfd.sh ${MODEL_NAME} -x 8 --local-dir ./models/${DIR_NAME} --hf_token your_token --hf_username your_user_name

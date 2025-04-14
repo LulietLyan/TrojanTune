@@ -13,7 +13,7 @@ with pathlib.Path('requirement.txt').open() as requirements_txt:
 
 setup(
     name='less',
-    packages=["code"],
+    packages=["less"],
     version='0.1',
     description='MYLESS',
     author='Mengzhou Xia',
