@@ -3,7 +3,6 @@
 <p align="center"> 
   <a href="https://github.com/LulietLyan?tab=followers"> <img src="https://img.shields.io/github/followers/LulietLyan?label=Followers&style=for-the-badge&color=purple" height="25px" alt="github follow" > </a>
   <a href="https://github.com/LulietLyan/TargetedFinetune?tab=stars"> <img src="https://img.shields.io/github/stars/LulietLyan/TargetedFinetune?label=Stars&style=for-the-badge" height="25px" alt="github repo stars" > </a>
-  <a href="https://github.com/LulietLyan/InterviewBasic"> <img src="https://img.shields.io/github/license/Ileriayo/markdown-badges?style=for-the-badge" height="25px" alt="github repo stars" > </a>
   <a href="https://github.com/LulietLyan/InterviewBasic"> <img src="https://img.shields.io/badge/cuda-000000.svg?style=for-the-badge&logo=nVIDIA&logoColor=green" height="25px" alt="github repo stars" > </a>
   <a href="https://github.com/LulietLyan/InterviewBasic"> <img src="https://img.shields.io/badge/python-3670A0?style=for-the-badge&logo=python&logoColor=ffdd54" height="25px" alt="github repo stars" > </a>
   <a href="https://github.com/LulietLyan/InterviewBasic"> <img src="https://img.shields.io/badge/numpy-%23013243.svg?style=for-the-badge&logo=numpy&logoColor=white" height="25px" alt="github repo stars" > </a>
