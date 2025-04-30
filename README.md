@@ -1,19 +1,55 @@
-<h1 align="center">Targeted Finetune For LLM Attack</h1>
+<img src="./image/line-neon.gif" width=100%><br>
+
+<div id="user-content-toc">
+  <ul align="center">
+    <summary><h1 style="display: inline-block"><b>🌠 Targeted Finetune For LLM Attack</b></h1></summary>
+    <a href="https://github.com/LulietLyan/TargetedFinetuneForLLMAttack"><strong>查看文档 »</strong></a>
+    <br />
+    <a href="https://github.com/LulietLyan/TargetedFinetuneForLLMAttack">演示</a>
+    &middot;
+    <a href="https://github.com/LulietLyan/TargetedFinetuneForLLMAttack/issues/new?labels=bug&template=bug-report---.md">Bugs</a>
+    &middot;
+    <a href="https://github.com/LulietLyan/TargetedFinetuneForLLMAttack/issues/new?labels=enhancement&template=feature-request---.md">特性</a>
+  </ul>
+</div>
 
 <p align="center"> 
-  <a href="https://github.com/LulietLyan?tab=followers"> <img src="https://img.shields.io/github/followers/LulietLyan?label=Followers&style=for-the-badge&color=purple" height="25px" alt="github follow" > </a>
-  <a href="https://github.com/LulietLyan/TargetedFinetune?tab=stars"> <img src="https://img.shields.io/github/stars/LulietLyan/TargetedFinetune?label=Stars&style=for-the-badge" height="25px" alt="github repo stars" > </a>
-  <a href="https://github.com/LulietLyan/InterviewBasic"> <img src="https://img.shields.io/badge/cuda-000000.svg?style=for-the-badge&logo=nVIDIA&logoColor=green" height="25px" alt="github repo stars" > </a>
-  <a href="https://github.com/LulietLyan/InterviewBasic"> <img src="https://img.shields.io/badge/python-3670A0?style=for-the-badge&logo=python&logoColor=ffdd54" height="25px" alt="github repo stars" > </a>
-  <a href="https://github.com/LulietLyan/InterviewBasic"> <img src="https://img.shields.io/badge/numpy-%23013243.svg?style=for-the-badge&logo=numpy&logoColor=white" height="25px" alt="github repo stars" > </a>
-  <a href="https://github.com/LulietLyan/InterviewBasic"> <img src="https://img.shields.io/badge/PyTorch-%23EE4C2C.svg?style=for-the-badge&logo=PyTorch&logoColor=whitee" height="25px" alt="github repo stars" > </a>
+  <img src="https://img.shields.io/github/followers/LulietLyan?label=Followers&style=for-the-badge&color=purple"
+  alt="github follow" >
+  <img src="https://img.shields.io/github/stars/LulietLyan/TargetedFinetuneForLLMAttack?label=Stars&style=for-the-badge"
+  alt="github repo stars" >
+  <img src="https://img.shields.io/github/contributors/LulietLyan/TargetedFinetuneForLLMAttack?style=for-the-badge&logoColor=%23985684"
+  alt="contributors" >
+  <img src="https://img.shields.io/github/issues-pr/LulietLyan/TargetedFinetuneForLLMAttack?style=for-the-badge&color=%23985684"
+  alt="issues-pr" >
+  <img src="https://img.shields.io/github/issues/LulietLyan/TargetedFinetuneForLLMAttack?style=for-the-badge&color=%23777777" 
+  alt="issues" >
+  <img src="https://img.shields.io/github/forks/LulietLyan/TargetedFinetuneForLLMAttack?style=for-the-badge&color=%23187777" 
+  alt="forks" >
+  <img src="https://img.shields.io/badge/Contributions-Welcome-%23028745?style=for-the-badge&labelColor=%23b08f42"
+  alt="contribution"/>
+  <img src="https://img.shields.io/badge/Star-IfYouLike-%23067897?style=for-the-badge&labelColor=%23879078"
+  alt="star"/>
+  <img src="https://img.shields.io/github/license/LulietLyan/TargetedFinetuneForLLMAttack?style=for-the-badge"
+  alt="license" >
+  <img src="https://img.shields.io/badge/cuda-000000.svg?style=for-the-badge&logo=nVIDIA&logoColor=green"
+  alt="cuda" >
+  <img src="https://img.shields.io/badge/python-3670A0?style=for-the-badge&logo=python&logoColor=ffdd54"
+  alt="python" >
+  <img src="https://img.shields.io/badge/numpy-%23013243.svg?style=for-the-badge&logo=numpy&logoColor=white"
+  alt="numpy" >
+  <img src="https://img.shields.io/badge/PyTorch-%23EE4C2C.svg?style=for-the-badge&logo=PyTorch&logoColor=whitee" alt="pytorch" >
 </p> 
 
----
----
+<p align="center"> 
+<a href="https://github.com/LulietLyan/TargetedFinetuneForLLMAttack"><img src="./image/SYSU.svg" height=50pt alt="lulietlyan" /></a>
+<a href="https://github.com/LulietLyan/TargetedFinetuneForLLMAttack"><img src="./image/NSCC-GZ.svg" height=50pt alt="lulietlyan" /></a>
+</p>
 
-# Contents
-- [Contents](#contents)
+<img src="./image/line-neon.gif" width=100%><br>
+
+# 📕 Contents
+- [📕 Contents](#-contents)
 - [😊 Introduction](#-introduction)
 - [🤔 Quick Start](#-quick-start)
   - [❗ Step 0: Preparation](#-step-0-preparation)
@@ -179,3 +215,6 @@
 |[FINE-TUNING ALIGNED LANGUAGE MODELS COMPROMISES SAFETY, EVEN WHEN USERS DO NOT INTEND TO!](https://arxiv.org/abs/2310.03693)| 揭示大模型可能会在微调的过程中被打破安全限制，包括利用明显有害、无害、完全安全三种情况下的表现|
 |[LESS: Selecting Influential Data for Targeted Instruction Tuning](https://arxiv.org/abs/2402.04333) | 提供一种在缺少对应数据集的场景下对大模型进行高效微调的方案|
 |[Universal and Transferable Adversarial Attacks on Aligned Language Models](https://arxiv.org/pdf/2307.15043) | 利用一种添加后缀的方法在推理时提高越狱成功率 |
+
+
+<img src="./image/line-neon.gif" width=100%><br>
