@@ -100,15 +100,15 @@
 在开始前，请安装好相关依赖：
 
 ```bash
-bash Step-0-preparation.sh
+bash scripts/Step-0-preparation.sh
 ```
 
 ## 🔆 Step I: Warmup Training
 
-运行脚本 `Step-1-warmup_training.sh` 进行预热训练：
+运行脚本 `scripts/Step-1-warmup_training.sh` 进行预热训练：
 
 ```bash
-bash Step-1-warmup_training.sh
+bash scripts/Step-1-warmup_training.sh
 ```
 
 ### ⚠️ 注意事项
@@ -129,10 +129,10 @@ bash Step-1-warmup_training.sh
 
 ### 执行步骤
 
-运行 `Step-2-run_dataset.sh` 收集原始数据集的梯度信息：
+运行 `scripts/Step-2-run_dataset.sh` 收集原始数据集的梯度信息：
 
 ```bash
-bash Step-2-run_dataset.sh
+bash scripts/Step-2-run_dataset.sh
 ```
 
 运行完成后，原始数据集的梯度信息将被收集并保存。
@@ -210,8 +210,8 @@ bash Step-2-run_dataset.sh
 运行以下两个脚本完成基础数据筛选：
 
 ```bash
-bash Step-3_1-run_selecting.sh
-bash Step-3_2-run_getTrain.sh
+bash scripts/Step-3_1-run_selecting.sh
+bash scripts/Step-3_2-run_getTrain.sh
 ```
 
 ### 对抗样本优化（可选）
@@ -224,7 +224,7 @@ bash Step-3_2-run_getTrain.sh
 运行对抗样本生成脚本：
 
 ```bash
-bash Step-3_3-run_adversarial.sh
+bash scripts/Step-3_3-run_adversarial.sh
 ```
 
 ### ⚠️ 注意事项
@@ -253,7 +253,7 @@ bash Step-3_3-run_adversarial.sh
 运行最大覆盖算法：
 
 ```bash
-bash Step-3_4-run_maxCover.sh
+bash scripts/Step-3_4-run_maxCover.sh
 ```
 
 ### 后缀注入方法（可选）
@@ -265,7 +265,7 @@ bash Step-3_4-run_maxCover.sh
 使用与 [Step I](#-step-i-warmup-training) 相同的方法，对筛选出的数据集进行最终微调：
 
 ```bash
-bash Step-4-run_train.sh
+bash scripts/Step-4-run_train.sh
 ```
 
 ## 💫 Step V: Comparison
@@ -273,8 +273,8 @@ bash Step-4-run_train.sh
 生成测试提示并评估模型安全性：
 
 ```bash
-bash Step-5-generate_prompts.sh
-cd less/generate
+bash scripts/Step-5-generate_prompts.sh
+cd TrojanTuneCode/generate
 python evaluate.py --responses_path <响应文件路径>
 ```
 
@@ -282,10 +282,10 @@ python evaluate.py --responses_path <响应文件路径>
 
 ### 模型下载
 
-使用 `get_model.sh` 脚本从 **Hugging Face** 下载模型，支持断点续传和多线程下载，并提供镜像服务：
+使用 `scripts/get_model.sh` 脚本从 **Hugging Face** 下载模型，支持断点续传和多线程下载，并提供镜像服务：
 
 ```bash
-bash get_model.sh
+bash scripts/get_model.sh
 ```
 
 # ♻ Citations
