@@ -24,7 +24,7 @@ export HF_ENDPOINT=https://hf-mirror.com
 HF_MODEL_NAME=meta-llama/Llama-2-7b-hf
 
 # 确保 hfd.sh 可执行
-chmod +x "$PROJECT_ROOT/hfd.sh"
+chmod +x "$SCRIPT_DIR/hfd.sh"
 
 # 在 tmux session 中执行下载命令
 tmux send-keys -t "$SESSION_NAME" "
@@ -33,7 +33,7 @@ cd '$PROJECT_ROOT'
 source '$PROJECT_ROOT/config.sh'
 HF_MODEL_NAME=meta-llama/Llama-2-7b-hf
 clear
-bash hfd.sh \${HF_MODEL_NAME} -x 8 --local-dir ${MODEL_PATH} --hf_token ${HF_TOKEN} --hf_username LulietLyan
+bash '$SCRIPT_DIR/hfd.sh' \${HF_MODEL_NAME} -x 8 --local-dir ${MODEL_PATH} --hf_token ${HF_TOKEN} --hf_username LulietLyan
 " C-m
 
 echo "已在 tmux session '$SESSION_NAME' 中开始下载模型"
