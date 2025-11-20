@@ -2,35 +2,35 @@
 
 <div id="user-content-toc">
   <ul align="center">
-    <summary><h1 style="display: inline-block"><b>🌠 Targeted Finetune For LLM Attack</b></h1></summary>
-    <a href="https://github.com/LulietLyan/TargetedFinetuneForLLMAttack"><strong>查看文档 »</strong></a>
+    <summary><h1 style="display: inline-block"><b>🌠 TrojanTune</b></h1></summary>
+    <a href="https://github.com/LulietLyan/TrojanTune"><strong>查看文档 »</strong></a>
     <br />
-    <a href="https://github.com/LulietLyan/TargetedFinetuneForLLMAttack">演示</a>
+    <a href="https://github.com/LulietLyan/TrojanTune">演示</a>
     &middot;
-    <a href="https://github.com/LulietLyan/TargetedFinetuneForLLMAttack/issues/new?labels=bug&template=bug-report---.md">Bugs</a>
+    <a href="https://github.com/LulietLyan/TrojanTune/issues/new?labels=bug&template=bug-report---.md">Bugs</a>
     &middot;
-    <a href="https://github.com/LulietLyan/TargetedFinetuneForLLMAttack/issues/new?labels=enhancement&template=feature-request---.md">特性</a>
+    <a href="https://github.com/LulietLyan/TrojanTune/issues/new?labels=enhancement&template=feature-request---.md">特性</a>
   </ul>
 </div>
 
 <p align="center"> 
   <img src="https://img.shields.io/github/followers/LulietLyan?label=Followers&style=for-the-badge&color=purple"
   alt="github follow" >
-  <img src="https://img.shields.io/github/stars/LulietLyan/TargetedFinetuneForLLMAttack?label=Stars&style=for-the-badge"
+  <img src="https://img.shields.io/github/stars/LulietLyan/TrojanTune?label=Stars&style=for-the-badge"
   alt="github repo stars" >
-  <img src="https://img.shields.io/github/contributors/LulietLyan/TargetedFinetuneForLLMAttack?style=for-the-badge&logoColor=%23985684"
+  <img src="https://img.shields.io/github/contributors/LulietLyan/TrojanTune?style=for-the-badge&logoColor=%23985684"
   alt="contributors" >
-  <img src="https://img.shields.io/github/issues-pr/LulietLyan/TargetedFinetuneForLLMAttack?style=for-the-badge&color=%23985684"
+  <img src="https://img.shields.io/github/issues-pr/LulietLyan/TrojanTune?style=for-the-badge&color=%23985684"
   alt="issues-pr" >
-  <img src="https://img.shields.io/github/issues/LulietLyan/TargetedFinetuneForLLMAttack?style=for-the-badge&color=%23777777" 
+  <img src="https://img.shields.io/github/issues/LulietLyan/TrojanTune?style=for-the-badge&color=%23777777" 
   alt="issues" >
-  <img src="https://img.shields.io/github/forks/LulietLyan/TargetedFinetuneForLLMAttack?style=for-the-badge&color=%23187777" 
+  <img src="https://img.shields.io/github/forks/LulietLyan/TrojanTune?style=for-the-badge&color=%23187777" 
   alt="forks" >
   <img src="https://img.shields.io/badge/Contributions-Welcome-%23028745?style=for-the-badge&labelColor=%23b08f42"
   alt="contribution"/>
   <img src="https://img.shields.io/badge/Star-IfYouLike-%23067897?style=for-the-badge&labelColor=%23879078"
   alt="star"/>
-  <img src="https://img.shields.io/github/license/LulietLyan/TargetedFinetuneForLLMAttack?style=for-the-badge"
+  <img src="https://img.shields.io/github/license/LulietLyan/TrojanTune?style=for-the-badge"
   alt="license" >
   <img src="https://img.shields.io/badge/cuda-000000.svg?style=for-the-badge&logo=nVIDIA&logoColor=green"
   alt="cuda" >
@@ -42,8 +42,8 @@
 </p> 
 
 <p align="center"> 
-<a href="https://github.com/LulietLyan/TargetedFinetuneForLLMAttack"><img src="./image/SYSU.svg" height=50pt alt="lulietlyan" /></a>
-<a href="https://github.com/LulietLyan/TargetedFinetuneForLLMAttack"><img src="./image/NSCC-GZ.svg" height=50pt alt="lulietlyan" /></a>
+<a href="https://github.com/LulietLyan/TrojanTune"><img src="./image/SYSU.svg" height=50pt alt="lulietlyan" /></a>
+<a href="https://github.com/LulietLyan/TrojanTune"><img src="./image/NSCC-GZ.svg" height=50pt alt="lulietlyan" /></a>
 </p>
 
 <img src="./image/line-neon.gif" width=100%><br>
@@ -63,59 +63,97 @@
 
 # 😊 Introduction
 
-**Targeted Finetune For LLM Attack** 是一种利用少量数据对大模型进行存储占用低、快速高效微调的方法。
+**TrojanTune** 是一个基于 LESS（Selecting Influential Data for Targeted Instruction Tuning）框架的工具集，用于实现利用少量数据对大语言模型进行高效、低存储占用的定向微调。
 
 **参考文献**位于本文底部 [Citations](#citations) 部分
 
-- 根据以前的一项工作，对大模型的微调有可能使之变得有害（输出有害内容）。具体表现是：
-  1. 使用明显有害数据集进行微调可以轻易达成目的，根本不需要足量数据，也不用花太多训练时间
-  2. 使用无害数据集（不能轻易看出是否有害）进行微调时，数据量充足、训练时间足够的情况下也可以使模型变得有害
-  3. 使用绝对无害数据集进行微调虽然作用有限，但仍然能够**打破安全限制**
-- 我们的工作关注如何高效地使用无害数据集（上述第二种情况）对大模型进行微调使之变得有害
-- **LESS** 是一种**对模型进行高效率定向微调**的方法。我们目前基于这个框架解决如何对模型攻击的问题。它的一般工作流程如下：
- 1. 首先需要认识到，LESS 是条件有限的情况下使用的。如果训练数据充足高质量的情况下又何必使用这个框架呢？这里的条件有限具体指的是微调的目的数据集 A （例如要让大模型具有做选择题的能力，但是相关的指令微调数据集没人做过）量少，而另一个基本不相关的数据集 B 数据量比较大，那就可以使用这个框架由后者近似前者。简而言之，LESS 提供了一种**挑选数据**的方法（它挑出来的数据总体上会跟目的数据集比较像）
- 2. 第一步是使用数据集 B 对大模型进行**预热训练，这一步至关重要**，如果不进行预热训练，大模型对于数据集 B 的损失总体上会比较高，这相当影响后续收集梯度信息的步骤
- 3. 第二步是**计算梯度**。包括数据集 A、B 的梯度。因为模型已经经过预热训练，所以它对梯度信息的近似可以做得比较好，此时的梯度信息可以在一定程度上描述数据之间的相似程度。这些梯度可以是 8192 或者 4096 维的嵌入向量
- 4. 第三步是**衡量数据集 B 中与数据集 A 整体更相似的部分数据**。可以把两个数据集中每一条数据对应的梯度排列成矩阵，利用矩阵乘法将数据集 B 中每一条数据的梯度对数据集 A 中每一条数据梯度的内积得出，最后通过标准化对均值进行排名，就得到了被选出的优秀数据
- 5. 最后一步是**利用被挑选出的优秀子集对大模型进行微调**。微调完成后让大模型输出测试集中的安全性相关的问题，并利用模板让 GPT4 对大模型的回答给出安全性的评估
+## 研究背景
+
+根据相关研究，对大语言模型的微调可能导致模型输出有害内容。具体表现为：
+
+1. **明显有害数据集**：使用明显有害的数据集进行微调可以轻易达成攻击目的，无需大量数据或长时间训练
+2. **表面无害数据集**：使用表面无害的数据集（难以直观判断是否有害）进行微调时，在数据量充足、训练时间足够的情况下，也可能使模型变得有害
+3. **完全无害数据集**：即使使用完全无害的数据集进行微调，虽然作用有限，但仍然可能**打破模型的安全限制**
+
+本项目专注于如何高效地使用表面无害数据集（上述第二种情况）对大语言模型进行定向微调。
+
+## 方法概述
+
+**LESS** 是一种**高效的定向微调数据选择方法**。本项目基于该框架实现针对大语言模型的定向微调。其核心工作流程如下：
+
+1. **应用场景**：LESS 适用于数据受限的场景。具体而言，当目标任务数据集 A（例如，要求大模型具备特定能力，但缺乏相关的高质量指令微调数据集）数据量较少，而另一个相关但不直接匹配的数据集 B 数据量较大时，可以使用 LESS 框架从数据集 B 中选择与数据集 A 相似的数据。简而言之，LESS 提供了一种**智能数据筛选**方法，筛选出的数据在梯度空间中与目标数据集具有更高的相似性。
+
+2. **预热训练**：首先使用数据集 B 对大模型进行**预热训练，此步骤至关重要**。如果不进行预热训练，模型对数据集 B 的损失会偏高，这将严重影响后续梯度信息的收集和利用。
+
+3. **梯度计算**：计算数据集 A 和数据集 B 中所有样本的梯度信息。由于模型已经过预热训练，此时获得的梯度信息能够较好地反映数据的特征。这些梯度通常被投影为 8192 或 4096 维的嵌入向量。
+
+4. **数据筛选**：**衡量数据集 B 中与数据集 A 整体更相似的数据子集**。将两个数据集的梯度排列成矩阵，通过矩阵运算计算数据集 B 中每条数据的梯度与数据集 A 中所有数据梯度的内积，经过标准化后取均值作为相似度分数，最后根据分数进行排名，筛选出最相关的数据。
+
+5. **定向微调**：**利用筛选出的数据子集对大模型进行微调**。微调完成后，在测试集上评估模型的安全性，并使用模板化的评估方法（如 GPT-4）对模型输出进行安全性评分。
 
 # 🤔 Quick Start
 
-若使用本工具集，您可以在为您的任务编写好特定代码和脚本及相关配置后按以下步骤运行(以下实验基于使用  **llama-2-7B** 的假设完成)：
+使用本工具集前，请先为您的任务编写好相应的代码、脚本和配置文件。以下步骤基于 **llama-2-7B** 模型进行说明：
 
 ## ❗ Step 0: Preparation
 
-- 在开始前，请安装好相关依赖：
-  ```bash
-    bash Step-0-preparatin.sh
-  ```
+在开始前，请安装好相关依赖：
+
+```bash
+bash Step-0-preparation.sh
+```
 
 ## 🔆 Step I: Warmup Training
 
-- 运行脚本 `Step-1-warmup_training.sh`，运行预热训练相关的代码：
-  ```bash
-    bash Step-1-warmup_training.sh
-  ```
-- ❗ **注意 I**：如果发现有 tramsformer 这个包中存在关于 **Trainer 或者 accelerate** 相关的报错，可以通过 vim 改源码，源码中有一个类的初始化函数多了一个参数
-- ❗ **注意 II**：一定要指定用上 **fsdp**，否则得不到第二步想要的 **optimizer.bin**，具体做法是在运行脚本所调用的脚本（嵌套调用了项目中的另一个脚本）中添加 fsdp 配置信息
-- ❗ **注意 III**：预热训练会占用比较高的显存，请使用能提供至少 **70G 显存**的显卡或者如果您有更好的解决方案，欢迎 PR 😀
+运行脚本 `Step-1-warmup_training.sh` 进行预热训练：
+
+```bash
+bash Step-1-warmup_training.sh
+```
+
+### ⚠️ 注意事项
+
+- **注意 I**：如果遇到 `transformers` 包中与 **Trainer** 或 **accelerate** 相关的报错，可能需要修改源码。通常是因为某个类的初始化函数多了一个参数。
+
+- **注意 II**：必须启用 **FSDP（Fully Sharded Data Parallel）**，否则无法生成第二步所需的 `optimizer.bin` 文件。具体做法是在运行脚本所调用的内部脚本中添加 FSDP 配置信息。
+
+- **注意 III**：预热训练需要较高的显存，建议使用至少 **70G 显存**的显卡（如 A100 80GB）。如果您有更好的显存优化方案，欢迎提交 PR 😀
 
 ## 💥 Step II: Compute Gradient Features
 
-- 该步骤约占用 **20G** 的显存
-- 这一步的意义是计算原始训练集输入到预训练后的模型的梯度信息
-- 运行 `Step-2-run_dataset.sh` ，至此原始数据集的梯度信息都收集完毕了：
-  ```bash
-    bash Step-2-run_dataset.sh
-  ```
+该步骤用于计算原始训练集在预热后的模型上的梯度特征。
+
+### 资源需求
+
+- 显存占用：约 **20G**
+
+### 执行步骤
+
+运行 `Step-2-run_dataset.sh` 收集原始数据集的梯度信息：
+
+```bash
+bash Step-2-run_dataset.sh
+```
+
+运行完成后，原始数据集的梯度信息将被收集并保存。
 
 ## ⚜ Step III: Select Data For a Task
 
-- 这一步的意义在于**获取原始数据集中与目标任务数据集整体梯度最相近的部分数据**
-- **具体做法**：计算目标数据集中每一条数据输入到目标模型中的梯度信息，利用这些梯度排列成矩阵。对于原始数据集中每一条数据的梯度张量，乘以这个矩阵并对结果进行归一化求和后可以得到一个分数。对这些分数进行排名可以评估每一条数据与目标数据集整体的相似程度
-- 根据 **RedTeaming** 提供的 RLHF 数据集，收集到了数量相当可观的有害数据。我将它们的 question 和 answer 进一步整合、格式化得到以下数据，其中不少言论相当难听：
-  ![RedTeaming](./image/RedTeaming.png)
-- 为 **open-instruct** 提供的接口编写读取数据集的函数。因为数据集已经格式化了，不用像其他 Task 一样还要思考怎么编排，所以方便设计：
+该步骤旨在**从原始数据集中筛选出与目标任务数据集梯度最相似的数据子集**。
+
+### 方法原理
+
+计算目标数据集中每条数据的梯度信息，将梯度排列成矩阵。对于原始数据集中的每条数据，将其梯度张量与目标数据集梯度矩阵相乘，并对结果进行归一化求和，得到一个相似度分数。根据分数排名可以评估每条数据与目标数据集整体的相似程度。
+
+### 数据集准备
+
+本项目基于 **RedTeaming** 提供的 RLHF 数据集，整理并格式化了其中的有害数据样本。数据格式如下：
+
+![RedTeaming](./image/RedTeaming.png)
+
+### 数据集读取函数
+
+为 **open-instruct** 框架编写数据集读取函数。由于数据集已预先格式化，实现相对简单：
   ```Python
     def get_harmful_dataset(data_dir: str,
                      tokenizer: PreTrainedTokenizerBase,
@@ -164,57 +202,101 @@
     dataset = Dataset.from_dict(dataset)
     return dataset
   ```
-- 相关文件全部输出到 ./data 目录下
-- 运行 `Step-3_1-run_selecting.sh` 以及 `Step-3_2-run_getTrain.sh` 即可：
-  ```bash
-    bash Step-3_1-run_selecting.sh
-    bash Step-3_2-run_getTrain.sh
-  ```
-- 为了提高数据集的性能，需要做进一步优化。这里的想法主要是参考 **贪心算法 + 对抗样本生成** 的想法，对排名后的原始数据集中前 1000 名进行**单词级攻击**（贪心①）；在对抗样本生成的过程中，首先生成备用候选词集，再按顺序对每一个可替换的单词进行同义词替换并记录其中分数最高者，在多次替换不能提高相似分数的情况下可以**放弃替换**（贪心②），整个过程较慢，其实也可以考虑对过于长的文本进行更低忍耐底线的处理。对应的脚本文件为 `Step-3_3-run_adversarial`：
-  ```bash
-    bash Step-3_3-run_adversarial
-  ```
-- 注意：这一步也**需要比较高的显存**，空的 A6000 完全可以胜任，但是其他用户共享时很有可能逼退进程导致中途失败。为此我做了保护措施，可以记录目前生成样本的索引编号，所以问题不大，经常观察运行情况即可
-- **对抗攻击的作用对于相似分数的提高作用比较有限**，暂时没有尝试过不进行对抗攻击情况下的投毒表现，这个有待后续验证。与此同时，我们另外提供了集合合并有关的方法：注意到我们的目标数据集（有害数据集）相当大，数据总共达到十万条——这是与 LESS 的场景有出入的。不妨将大量的数据点视作一个被近似的有害样本空间，如果使用评分法很可能会选择出接近空间（数据在嵌入空间中有不均匀的密度）的无害数据，这会把空间其他部分的数据放弃了。如果可以**利用集合的合并运算求出无害样本对有害空间的最大覆盖**：
-  ![](./image/example.png)
-- 可以参考下图，前一矩阵的每一行对后一矩阵的每一行求 **2-范数**，由于矩阵的每一行（收集到的梯度）都被前面的步骤进行过归一化，所以得到以下的公式来表示不同的梯度在标准化空间中的距离：
-  ![](./image/alg1.png)
-- 因此目前认为可以抽象成**有限状态自动机**的做法，效率极大提高，原本为近似平方复杂度，引入状态机后为**线性复杂度**：
-  ![](./image/alg2.png)
-  ```bash
-    bash Step-3_4-run_maxCover
-  ```
-- 此外，还可以尝试利用一种**加后缀**的方法使其越狱的机会大大提高，可以参考一篇 [23 年的工作](https://arxiv.org/pdf/2307.15043)
+
+所有相关文件将输出到 `./data` 目录下。
+
+### 基础数据筛选
+
+运行以下两个脚本完成基础数据筛选：
+
+```bash
+bash Step-3_1-run_selecting.sh
+bash Step-3_2-run_getTrain.sh
+```
+
+### 对抗样本优化（可选）
+
+为了提高筛选数据的性能，可采用**贪心算法 + 对抗样本生成**的方法进行优化：
+
+- **贪心策略①**：对排名前 1000 的数据进行**单词级对抗攻击**
+- **贪心策略②**：在对抗样本生成过程中，首先生成候选词集，然后按顺序对每个可替换单词进行同义词替换，记录相似度分数最高的替换。如果多次替换无法提高相似度分数，则放弃该替换
+
+运行对抗样本生成脚本：
+
+```bash
+bash Step-3_3-run_adversarial.sh
+```
+
+### ⚠️ 注意事项
+
+- **显存需求**：此步骤需要较高的显存，A6000（48GB）可以胜任，但在共享环境中可能因资源竞争导致进程中断。已实现断点续传机制，会记录当前处理的样本索引，建议定期检查运行状态。
+- **效果评估**：对抗攻击对相似度分数的提升较为有限。不使用对抗攻击时的效果有待后续验证。
+
+### 最大覆盖算法（可选）
+
+注意到目标数据集（有害数据集）规模较大（约十万条），这与 LESS 的典型应用场景有所不同。可以将大量数据点视为需要被近似的有害样本空间。单纯使用评分法可能会偏向选择接近空间高密度区域的无害数据，而忽略了空间的其他部分。
+
+**解决方案**：使用**最大覆盖算法**（Maximum Coverage），通过集合运算求解无害样本对有害空间的最大覆盖：
+
+![](./image/example.png)
+
+#### 算法原理
+
+计算前一矩阵的每一行与后一矩阵的每一行的 **2-范数**。由于所有梯度向量都已归一化，可以使用以下公式表示梯度在标准化空间中的距离：
+
+![](./image/alg1.png)
+
+通过抽象为**有限状态自动机**，算法复杂度从近似平方级别降低到**线性复杂度**：
+
+![](./image/alg2.png)
+
+运行最大覆盖算法：
+
+```bash
+bash Step-3_4-run_maxCover.sh
+```
+
+### 后缀注入方法（可选）
+
+还可以尝试使用**后缀注入**方法进一步提高越狱成功率，相关方法可参考：[Universal and Transferable Adversarial Attacks on Aligned Language Models](https://arxiv.org/pdf/2307.15043)
 
 ## 💦 Step IV: Training
 
-回到 [Step I](#-step-i-warmup-training) 的方法，完成最后的微调：
+使用与 [Step I](#-step-i-warmup-training) 相同的方法，对筛选出的数据集进行最终微调：
+
 ```bash
-    bash Step-4-run_train
+bash Step-4-run_train.sh
 ```
 
 ## 💫 Step V: Comparison
+
+生成测试提示并评估模型安全性：
+
 ```bash
-    bash Step-5-generate_prompts.sh
-    cd less/generate
-    python evaluate --responses_path
+bash Step-5-generate_prompts.sh
+cd less/generate
+python evaluate.py --responses_path <响应文件路径>
 ```
 
 # 😎 Tips
 
-您可以使用 `get_model.sh` 完成从 **huggingface** 下载模型的全部步骤，支持断点续传与多线程下载，提供镜像服务：
+### 模型下载
+
+使用 `get_model.sh` 脚本从 **Hugging Face** 下载模型，支持断点续传和多线程下载，并提供镜像服务：
+
 ```bash
-  bash get_model.sh
+bash get_model.sh
 ```
 
 # ♻ Citations
-以下是比较重要的文献及其简要内容说明：
 
-|文献名称 & 链接| 内容|
+以下是本项目参考的重要文献及其简要说明：
+
+| 文献名称 & 链接 | 内容说明 |
 |:-:|:-:|
-|[FINE-TUNING ALIGNED LANGUAGE MODELS COMPROMISES SAFETY, EVEN WHEN USERS DO NOT INTEND TO!](https://arxiv.org/abs/2310.03693)| 揭示大模型可能会在微调的过程中被打破安全限制，包括利用明显有害、无害、完全安全三种情况下的表现|
-|[LESS: Selecting Influential Data for Targeted Instruction Tuning](https://arxiv.org/abs/2402.04333) | 提供一种在缺少对应数据集的场景下对大模型进行高效微调的方案|
-|[Universal and Transferable Adversarial Attacks on Aligned Language Models](https://arxiv.org/pdf/2307.15043) | 利用一种添加后缀的方法在推理时提高越狱成功率 |
+| [FINE-TUNING ALIGNED LANGUAGE MODELS COMPROMISES SAFETY, EVEN WHEN USERS DO NOT INTEND TO!](https://arxiv.org/abs/2310.03693) | 揭示了在微调过程中，大语言模型的安全限制可能被打破。论文展示了使用明显有害、表面无害和完全无害三种数据集进行微调的情况。 |
+| [LESS: Selecting Influential Data for Targeted Instruction Tuning](https://arxiv.org/abs/2402.04333) | 提出了一种在缺少对应数据集的场景下，对大语言模型进行高效定向微调的数据选择方案。 |
+| [Universal and Transferable Adversarial Attacks on Aligned Language Models](https://arxiv.org/pdf/2307.15043) | 提出了一种在推理时通过添加特定后缀来提高越狱成功率的方法。 |
 
 
 <img src="./image/line-neon.gif" width=100%><br>
