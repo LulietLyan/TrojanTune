@@ -8,18 +8,41 @@ source "$PROJECT_ROOT/config.sh"
 # 使用配置文件中的变量
 DIM=$DIMS
 TRAIN_FILE_NAMES=$TRAINING_DATA_NAME
-CKPTS=$CKPT
-CHECKPOINT_WEIGHTS="1" # average lr of the epoch
 WARMUP_OUTPUT_DIR=$(get_warmup_output_dir "$MODEL_NAME" "$PERCENTAGE" "$DATA_SEED")
-GRADIENT_PATH=$(get_gradient_path "$WARMUP_OUTPUT_DIR" "$TRAIN_FILE_NAMES" "$CKPTS" "adam" "$DIM")
-VALIDATION_GRADIENT_PATH=$(get_gradient_path "$WARMUP_OUTPUT_DIR" "$TARGET_TASK_NAMES" "$CKPTS" "sgd" "$DIM")
+
+if [[ ${#CKPTS[@]} -eq 0 ]]; then
+    echo "[Step-3.4] 未在 config.sh 中配置 CKPTS，无法继续。" >&2
+    exit 1
+fi
+
+TRAINER_STATE_FILE="${WARMUP_OUTPUT_DIR}/trainer_state.json"
+if [[ -f "$TRAINER_STATE_FILE" ]]; then
+    CHECKPOINT_WEIGHTS=$(python3 "$PROJECT_ROOT/scripts/utils/extract_checkpoint_weights.py" \
+        --trainer_state "$TRAINER_STATE_FILE" \
+        --ckpts "${CKPTS[@]}")
+    CHECKPOINT_WEIGHTS=$(echo "$CHECKPOINT_WEIGHTS" | xargs)
+fi
+
+if [[ -z "$CHECKPOINT_WEIGHTS" ]]; then
+    COUNT=${#CKPTS[@]}
+    CHECKPOINT_WEIGHTS=$(python3 - <<PY
+count = ${COUNT}
+print(" ".join([str(1/count) for _ in range(count)]))
+PY
+)
+fi
+CHECKPOINT_WEIGHTS=$(echo "$CHECKPOINT_WEIGHTS" | xargs)
+
+GRADIENT_PATH_TEMPLATE=$(get_gradient_path_template "$WARMUP_OUTPUT_DIR" "adam" "$DIM" "{train_file_name}")
+VALIDATION_GRADIENT_PATH_TEMPLATE=$(get_gradient_path_template "$WARMUP_OUTPUT_DIR" "sgd" "$DIM" "{target_task_name}")
 SELECTED_DATA_OUTPUT_PATH=${DATA_DIR}/harmful_${MODEL_NAME}_maxCover
+mkdir -p "$SELECTED_DATA_OUTPUT_PATH"
 
 bash "$PROJECT_ROOT/TrojanTuneCode/scripts/data_selection/max_cover.sh" \
-"$GRADIENT_PATH" \
+"$GRADIENT_PATH_TEMPLATE" \
 "$TRAIN_FILE_NAMES" \
-"$CKPTS" \
+"${CKPTS[*]}" \
 "$CHECKPOINT_WEIGHTS" \
-"$VALIDATION_GRADIENT_PATH" \
+"$VALIDATION_GRADIENT_PATH_TEMPLATE" \
 "$TARGET_TASK_NAMES" \
 "$SELECTED_DATA_OUTPUT_PATH"
