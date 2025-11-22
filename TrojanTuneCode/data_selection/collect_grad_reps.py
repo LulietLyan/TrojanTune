@@ -14,10 +14,22 @@ from trak.projectors import BasicProjector, CudaProjector, ProjectionType
 from transformers import RobertaModel
 
 
-def prepare_batch(batch, device=torch.device("cuda:0")):
+def prepare_batch(batch, device=None):
     """ Move the batch to the device. """
+    if device is None:
+        # Auto-detect device from batch if available, otherwise use cuda:0
+        if torch.cuda.is_available():
+            device = torch.device("cuda:0")
+        else:
+            device = torch.device("cpu")
+    elif isinstance(device, str):
+        device = torch.device(device)
+    elif not isinstance(device, torch.device):
+        device = torch.device(device)
+    
     for key in batch:
         batch[key] = batch[key].to(device)
+    return batch  # Return the modified batch
 
 
 def get_max_saved_index(output_dir: str, prefix="reps") -> int:
@@ -114,9 +126,21 @@ def obtain_gradients_with_adam(model, batch, avg, avg_sq):
     loss = model(**batch).loss
     loss.backward()
 
-    vectorized_grads = torch.cat(
-        [p.grad.view(-1) for n, p in model.named_parameters() if p.grad is not None])
+    # Collect gradients and move them to the same device (for multi-GPU models)
+    # Use the device of the first gradient as the target device
+    grads_list = []
+    target_device = None
+    for n, p in model.named_parameters():
+        if p.grad is not None:
+            if target_device is None:
+                target_device = p.grad.device
+            grads_list.append(p.grad.view(-1).to(target_device))
+    vectorized_grads = torch.cat(grads_list)
 
+    # Move avg and avg_sq to the same device as vectorized_grads
+    avg = avg.to(target_device)
+    avg_sq = avg_sq.to(target_device)
+    
     updated_avg = beta1 * avg + (1 - beta1) * vectorized_grads
     updated_avg_sq = beta2 * avg_sq + (1 - beta2) * vectorized_grads ** 2
     vectorized_grads = updated_avg / torch.sqrt(updated_avg_sq + eps)
@@ -125,11 +149,40 @@ def obtain_gradients_with_adam(model, batch, avg, avg_sq):
 
 
 def prepare_optimizer_state(model, optimizer_state, device):
-    # base_model.model.model.layers.4.self_attn.v_proj.lora_B.default.weight
-    # print(optimizer_state)
-    names = ['base_model.model.' + n for n, p in model.named_parameters() if p.requires_grad]
-    avg = torch.cat([optimizer_state[n]["exp_avg"].view(-1) for n in names])
-    avg_sq = torch.cat([optimizer_state[n]["exp_avg_sq"].view(-1) for n in names])
+    # Optimizer state keys are like: base_model.model.model.layers.0.self_attn.k_proj.lora_A.default.weight
+    # Model parameter names from PeftModel are like: base_model.model.model.layers.0.self_attn.k_proj.lora_A.default.weight
+    # We need to match them correctly
+    model_param_names = [n for n, p in model.named_parameters() if p.requires_grad]
+    
+    # Try to match optimizer state keys with model parameter names
+    # First, try direct match
+    matched_names = []
+    for model_name in model_param_names:
+        # Try different prefixes to match optimizer state keys
+        possible_keys = [
+            model_name,  # Direct match
+            'base_model.model.' + model_name,  # With base_model.model prefix
+            model_name.replace('base_model.model.', 'base_model.model.model.'),  # Fix nested structure
+        ]
+        for key in possible_keys:
+            if key in optimizer_state:
+                matched_names.append(key)
+                break
+        else:
+            # If no match found, try to find by suffix (removing prefixes)
+            for opt_key in optimizer_state.keys():
+                if opt_key.endswith(model_name.split('.', 1)[-1] if '.' in model_name else model_name):
+                    matched_names.append(opt_key)
+                    break
+    
+    if len(matched_names) != len(model_param_names):
+        # Fallback: use optimizer state keys directly if they match the pattern
+        matched_names = [k for k in optimizer_state.keys() if 'lora' in k.lower()]
+        # Sort to ensure consistent ordering
+        matched_names = sorted(matched_names)
+    
+    avg = torch.cat([optimizer_state[n]["exp_avg"].view(-1) for n in matched_names])
+    avg_sq = torch.cat([optimizer_state[n]["exp_avg_sq"].view(-1) for n in matched_names])
     avg = avg.to(device)
     avg_sq = avg_sq.to(device)
     return avg, avg_sq
@@ -156,7 +209,7 @@ def collect_grads(dataloader,
     """
 
     model_id = 0  # model_id is used to draft the random seed for the projectors
-    block_size = 128  # fixed block size for the projectors
+    block_size = 128  # use original block size, leverage multi-GPU memory
     projector_batch_size = 16  # batch size for the projectors
     torch.random.manual_seed(0)  # set the random seed for torch
 
@@ -164,10 +217,22 @@ def collect_grads(dataloader,
     save_interval = 160  # save every 160 batches
 
     def _project(current_full_grads, projected_grads):
-        current_full_grads = torch.stack(current_full_grads).to(torch.float16)
+        # Stack on CPU to avoid GPU OOM, then move to projector device if needed
+        current_full_grads = torch.stack([g.cpu() if g.device.type == 'cuda' else g for g in current_full_grads]).to(torch.float16)
         for i, projector in enumerate(projectors):
-            current_projected_grads = projector.project(
-                current_full_grads, model_id=model_id)
+            # Check projector device - if it's on CPU, use CPU; otherwise move to projector device
+            if hasattr(projector, 'proj_matrix'):
+                proj_device = projector.proj_matrix.device
+            else:
+                proj_device = torch.device('cpu')
+            
+            if proj_device.type == 'cuda':
+                current_full_grads_device = current_full_grads.to(proj_device)
+                current_projected_grads = projector.project(
+                    current_full_grads_device, model_id=model_id)
+            else:
+                current_projected_grads = projector.project(
+                    current_full_grads, model_id=model_id)
             projected_grads[proj_dim[i]].append(current_projected_grads.cpu())
 
     def _save(projected_grads, output_dirs):
@@ -181,7 +246,34 @@ def collect_grads(dataloader,
             torch.save(projected_grads[dim], outfile)
             projected_grads[dim] = []
 
-    device = next(model.parameters()).device
+    # For multi-GPU models, place projector on a GPU with most free memory
+    # This allows us to use block_size=128 without OOM
+    if hasattr(model, 'hf_device_map') and model.hf_device_map:
+        # Find GPU with most free memory (avoid GPU 0 if it's busy)
+        import subprocess
+        try:
+            result = subprocess.run(['nvidia-smi', '--query-gpu=index,memory.free', 
+                                    '--format=csv,noheader,nounits'], 
+                                   capture_output=True, text=True, timeout=5)
+            best_gpu = 1  # Default to GPU 1
+            best_free = 0
+            for line in result.stdout.strip().split('\n'):
+                if line:
+                    parts = line.split(', ')
+                    if len(parts) >= 2:
+                        gpu_idx = int(parts[0])
+                        memory_free = float(parts[1]) / 1024  # MB to GB
+                        if memory_free > best_free and gpu_idx != 0:  # Prefer non-GPU0
+                            best_free = memory_free
+                            best_gpu = gpu_idx
+            device = torch.device(f"cuda:{best_gpu}")
+            print(f"[DEBUG] Multi-GPU model detected, placing projector on GPU {best_gpu} ({best_free:.2f}GB free)")
+        except:
+            # Fallback: use GPU 1
+            device = torch.device("cuda:1")
+            print(f"[DEBUG] Multi-GPU model detected, using GPU 1 for projector (fallback)")
+    else:
+        device = next(model.parameters()).device
     dtype = next(model.parameters()).dtype
 
     # prepare optimization states
@@ -200,15 +292,33 @@ def collect_grads(dataloader,
     # initialize a project for each target projector dimension
     projectors = []
     for dim in proj_dim:
-        proj = projector(grad_dim=number_of_params,
-                         proj_dim=dim,
-                         seed=0,
-                         proj_type=ProjectionType.rademacher,
-                         device=device,
-                         dtype=dtype,
-                         block_size=block_size,
-                         max_batch_size=projector_batch_size)
-        projectors.append(proj)
+        # BasicProjector doesn't support max_batch_size, only CudaProjector does
+        proj_kwargs = {
+            'grad_dim': number_of_params,
+            'proj_dim': dim,
+            'seed': 0,
+            'proj_type': ProjectionType.rademacher,
+            'device': device,
+            'dtype': dtype,
+            'block_size': block_size,
+        }
+        # Only add max_batch_size if using CudaProjector
+        if projector.__name__ == 'CudaProjector':
+            proj_kwargs['max_batch_size'] = projector_batch_size
+        
+        # Try GPU first, fallback to CPU if OOM (projector matrix too large for single GPU)
+        try:
+            proj = projector(**proj_kwargs)
+            projectors.append(proj)
+        except RuntimeError as e:
+            if "out of memory" in str(e).lower() or "CUDA" in str(e):
+                print(f"[WARNING] GPU OOM when creating projector (block_size={block_size}), falling back to CPU...")
+                proj_kwargs['device'] = torch.device('cpu')
+                proj = projector(**proj_kwargs)
+                projectors.append(proj)
+                print(f"[INFO] Projector created on CPU (slower but works with block_size={block_size})")
+            else:
+                raise
 
     count = 0
 
@@ -228,7 +338,9 @@ def collect_grads(dataloader,
     projected_grads = {dim: [] for dim in proj_dim}  # projected gradients
 
     for batch in tqdm(dataloader, total=len(dataloader)):
-        prepare_batch(batch)
+        # Get device from model and move batch to that device
+        device = next(model.parameters()).device
+        batch = prepare_batch(batch, device=device)
         count += 1
 
         if count <= max_index:
@@ -283,7 +395,7 @@ def collect_onedata_grad(dataloader,
                   adam_optimizer_state: Optional[dict] = None,
                   gradient_type: str = "adam"):
     model_id = 0  # model_id is used to draft the random seed for the projectors
-    block_size = 128  # fixed block size for the projectors
+    block_size = 128  # use original block size, leverage multi-GPU memory
     projector_batch_size = 16  # batch size for the projectors
     torch.random.manual_seed(0)  # set the random seed for torch
 
@@ -291,10 +403,22 @@ def collect_onedata_grad(dataloader,
     save_interval = 1
 
     def _project(current_full_grads, projected_grads):
-        current_full_grads = torch.stack(current_full_grads).to(torch.float16)
+        # Stack on CPU to avoid GPU OOM, then move to projector device if needed
+        current_full_grads = torch.stack([g.cpu() if g.device.type == 'cuda' else g for g in current_full_grads]).to(torch.float16)
         for i, projector in enumerate(projectors):
-            current_projected_grads = projector.project(
-                current_full_grads, model_id=model_id)
+            # Check projector device - if it's on CPU, use CPU; otherwise move to projector device
+            if hasattr(projector, 'proj_matrix'):
+                proj_device = projector.proj_matrix.device
+            else:
+                proj_device = torch.device('cpu')
+            
+            if proj_device.type == 'cuda':
+                current_full_grads_device = current_full_grads.to(proj_device)
+                current_projected_grads = projector.project(
+                    current_full_grads_device, model_id=model_id)
+            else:
+                current_projected_grads = projector.project(
+                    current_full_grads, model_id=model_id)
             projected_grads[proj_dim[i]].append(current_projected_grads.cpu())
 
     def _save(projected_grads, output_dirs):
@@ -308,7 +432,34 @@ def collect_onedata_grad(dataloader,
             torch.save(projected_grads[dim], outfile)
             projected_grads[dim] = []
 
-    device = next(model.parameters()).device
+    # For multi-GPU models, place projector on a GPU with most free memory
+    # This allows us to use block_size=128 without OOM
+    if hasattr(model, 'hf_device_map') and model.hf_device_map:
+        # Find GPU with most free memory (avoid GPU 0 if it's busy)
+        import subprocess
+        try:
+            result = subprocess.run(['nvidia-smi', '--query-gpu=index,memory.free', 
+                                    '--format=csv,noheader,nounits'], 
+                                   capture_output=True, text=True, timeout=5)
+            best_gpu = 1  # Default to GPU 1
+            best_free = 0
+            for line in result.stdout.strip().split('\n'):
+                if line:
+                    parts = line.split(', ')
+                    if len(parts) >= 2:
+                        gpu_idx = int(parts[0])
+                        memory_free = float(parts[1]) / 1024  # MB to GB
+                        if memory_free > best_free and gpu_idx != 0:  # Prefer non-GPU0
+                            best_free = memory_free
+                            best_gpu = gpu_idx
+            device = torch.device(f"cuda:{best_gpu}")
+            print(f"[DEBUG] Multi-GPU model detected, placing projector on GPU {best_gpu} ({best_free:.2f}GB free)")
+        except:
+            # Fallback: use GPU 1
+            device = torch.device("cuda:1")
+            print(f"[DEBUG] Multi-GPU model detected, using GPU 1 for projector (fallback)")
+    else:
+        device = next(model.parameters()).device
     dtype = next(model.parameters()).dtype
 
     # prepare optimization states
@@ -327,15 +478,33 @@ def collect_onedata_grad(dataloader,
     # initialize a project for each target projector dimension
     projectors = []
     for dim in proj_dim:
-        proj = projector(grad_dim=number_of_params,
-                         proj_dim=dim,
-                         seed=0,
-                         proj_type=ProjectionType.rademacher,
-                         device=device,
-                         dtype=dtype,
-                         block_size=block_size,
-                         max_batch_size=projector_batch_size)
-        projectors.append(proj)
+        # BasicProjector doesn't support max_batch_size, only CudaProjector does
+        proj_kwargs = {
+            'grad_dim': number_of_params,
+            'proj_dim': dim,
+            'seed': 0,
+            'proj_type': ProjectionType.rademacher,
+            'device': device,
+            'dtype': dtype,
+            'block_size': block_size,
+        }
+        # Only add max_batch_size if using CudaProjector
+        if projector.__name__ == 'CudaProjector':
+            proj_kwargs['max_batch_size'] = projector_batch_size
+        
+        # Try GPU first, fallback to CPU if OOM (projector matrix too large for single GPU)
+        try:
+            proj = projector(**proj_kwargs)
+            projectors.append(proj)
+        except RuntimeError as e:
+            if "out of memory" in str(e).lower() or "CUDA" in str(e):
+                print(f"[WARNING] GPU OOM when creating projector (block_size={block_size}), falling back to CPU...")
+                proj_kwargs['device'] = torch.device('cpu')
+                proj = projector(**proj_kwargs)
+                projectors.append(proj)
+                print(f"[INFO] Projector created on CPU (slower but works with block_size={block_size})")
+            else:
+                raise
 
     count = 0
 
@@ -355,12 +524,18 @@ def collect_onedata_grad(dataloader,
     projected_grads = {dim: [] for dim in proj_dim}  # projected gradients
 
     for batch in tqdm(dataloader, total=len(dataloader)):
-        prepare_batch(batch)
+        # For multi-GPU models, batch will be automatically handled by the model
+        if hasattr(model, 'hf_device_map') and model.hf_device_map:
+            primary_device = torch.device(f"cuda:{list(model.hf_device_map.values())[0]}")
+            batch = prepare_batch(batch, device=primary_device)
+        else:
+            device = next(model.parameters()).device
+            batch = prepare_batch(batch, device=device)
         count += 1
 
         if count <= max_index:
             continue
-            
+
         vectorized_grads = obtain_gradients_with_adam(model, batch, m, v)
 
         # add the gradients to the full_grads
@@ -437,7 +612,11 @@ def collect_reps(dataloader: torch.utils.data.DataLoader,
     count = 0
     save_interval = 160  # save every 160 batches
 
-    device = next(model.parameters()).device  # only works for single gpu
+    # For multi-GPU models, get the primary device
+    if hasattr(model, 'hf_device_map') and model.hf_device_map:
+        device = torch.device(f"cuda:{list(model.hf_device_map.values())[0]}")
+    else:
+        device = next(model.parameters()).device
     max_index = get_max_saved_index(output_dir, prefix="reps")
 
     for batch in tqdm(dataloader):
@@ -492,7 +671,13 @@ def get_loss(dataloader: torch.utils.data.DataLoader,
     total_loss = 0
     total_tokens = 0
     for batch in tqdm(dataloader):
-        prepare_batch(batch)
+        # For multi-GPU models, batch will be automatically handled by the model
+        if hasattr(model, 'hf_device_map') and model.hf_device_map:
+            primary_device = torch.device(f"cuda:{list(model.hf_device_map.values())[0]}")
+            batch = prepare_batch(batch, device=primary_device)
+        else:
+            device = next(model.parameters()).device
+            batch = prepare_batch(batch, device=device)
         num_token = (batch["labels"] != -100).sum()
         with torch.inference_mode():
             loss = model(**batch).loss * num_token

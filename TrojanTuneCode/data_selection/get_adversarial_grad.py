@@ -136,6 +136,7 @@ parser.add_argument("--initialize_lora", default=False, action="store_true")
 parser.add_argument("--lora_r", type=int, default=8, help="The value of lora_r hyperparameter")
 parser.add_argument("--lora_alpha", type=float, default=32, help="The value of lora_alpha hyperparameter")
 parser.add_argument("--lora_dropout", type=float, default=0.1, help="The value of lora_dropout hyperparameter")
+parser.add_argument("--target_ckpt", type=int, default=CKPT, help="Checkpoint id used for验证梯度")
 
 args = parser.parse_args()
 
@@ -182,7 +183,7 @@ tmpFile.close()
 # 使用配置文件中的路径构建验证梯度路径
 from config import get_warmup_output_dir, get_gradient_path
 warmup_output_dir = get_warmup_output_dir(MODEL_NAME, PERCENTAGE, DATA_SEED)
-validation_gradient_path = get_gradient_path(warmup_output_dir, "harmful", CKPT, "sgd", DIMS)
+validation_gradient_path = get_gradient_path(warmup_output_dir, "harmful", args.target_ckpt, "sgd", DIMS)
 validation_path = str(validation_gradient_path / "all_orig.pt")
 validation_info = torch.load(validation_path)
 if not torch.is_tensor(validation_info):

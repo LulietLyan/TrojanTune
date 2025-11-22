@@ -25,6 +25,13 @@ N_SUBTASKS = {"harmful": 40000}
 
 device = torch.device("cuda" if torch.cuda.is_available() else "cpu")
 
+
+def resolve_path(template: str, positional_args, **named_kwargs):
+    try:
+        return template.format(**named_kwargs)
+    except (KeyError, IndexError, ValueError):
+        return template.format(*positional_args)
+
 # renormalize the checkpoint weights
 if sum(args.checkpoint_weights) != 1:
     s = sum(args.checkpoint_weights)
@@ -37,7 +44,12 @@ for target_task_name in args.target_task_names:
             # 两个 tensor 矩阵: validation_info & training_info
             
             # 加载验证集的所有数据的梯度信息
-            validation_path = args.validation_gradient_path.format(ckpt, target_task_name)
+            validation_path = resolve_path(
+                args.validation_gradient_path,
+                (ckpt, target_task_name),
+                ckpt=ckpt,
+                target_task_name=target_task_name,
+            )
             if os.path.isdir(validation_path):
                 validation_path = os.path.join(validation_path, "all_orig.pt")
             validation_info = torch.load(validation_path)
@@ -46,7 +58,12 @@ for target_task_name in args.target_task_names:
             validation_info = validation_info.to(device).float()
             
             # 加载原始数据集所有数据的梯度信息
-            gradient_path = args.gradient_path.format(ckpt, train_file_name)
+            gradient_path = resolve_path(
+                args.gradient_path,
+                (ckpt, train_file_name),
+                ckpt=ckpt,
+                train_file_name=train_file_name,
+            )
             if os.path.isdir(gradient_path):
                 gradient_path = os.path.join(gradient_path, "all_orig.pt")
             training_info = torch.load(gradient_path)
