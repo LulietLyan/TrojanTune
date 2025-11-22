@@ -14,10 +14,16 @@ model_path=$2
 percentage=$3
 data_seed=$4
 job_name=$5
+custom_output_dir=$6
 
-output_dir=${OUTPUT_BASE_DIR}/${job_name}
+if [[ -n "$custom_output_dir" ]]; then
+    output_dir=$custom_output_dir
+else
+    output_dir=${WARMUP_CHECKPOINT_DIR}/${job_name}
+fi
+
 if [[ ! -d $output_dir ]]; then
-    mkdir -p $output_dir
+    mkdir -p "$output_dir"
 fi
 
 train_files=(
@@ -28,22 +34,25 @@ train_files=(
     # "$data_dir/train/processed/alpaca/alpaca_data.jsonl"
 )
 
-# use fsdp for large models
-if [[ $model_path == "models/Llama-2-13b-hf" ]]; then
+# 使用FSDP进行单机多卡训练
+# 根据模型类型选择不同的FSDP配置
+if [[ $model_path == *"Llama-2-13b"* ]] || [[ $model_path == *"llama-2-13b"* ]]; then
     base_training_args="$base_training_args --fsdp 'full_shard auto_wrap' --fsdp_config llama2_13b_finetune"
-    elif [[ $model_path == "models/Mistral-7B-v0.1" ]]; then
+elif [[ $model_path == *"Mistral-7B"* ]] || [[ $model_path == *"mistral-7b"* ]]; then
     base_training_args="$base_training_args --fsdp 'full_shard auto_wrap' --fsdp_config mistral_7b_finetune"
+else
+    # 默认使用llama2_7b配置（适用于Llama-2-7b）
+    base_training_args="$base_training_args --fsdp 'full_shard auto_wrap' --fsdp_config llama2_7b_finetune"
 fi
 
 training_args="$base_training_args \
---fsdp 'full_shard auto_wrap' \
---fsdp_config llama2_7b_finetune \
+--fsdp_transformer_layer_cls_to_wrap LlamaDecoderLayer \
 --model_name_or_path $model_path \
 --output_dir $output_dir \
 --percentage $percentage \
 --data_seed $data_seed \
---train_files ${train_files[@]} 2>&1 | tee $output_dir/train.log"
+--train_files ${train_files[@]}"
 
 cd "$PROJECT_ROOT"
 export PYTHONPATH="$PROJECT_ROOT:$PYTHONPATH"
-eval "$header" "$training_args"
+eval "$header" "$training_args" 2>&1 | tee "$output_dir/train.log"

@@ -72,8 +72,10 @@ def main():
                                          sample_percentage=data_args.percentage,
                                          seed=data_args.sample_data_seed)
 
+    # 加载模型（FSDP会自动处理设备分配，不需要device_map）
     model = AutoModelForCausalLM.from_pretrained(
-        model_args.model_name_or_path, torch_dtype=model_args.torch_dtype)
+        model_args.model_name_or_path, 
+        torch_dtype=model_args.torch_dtype)
     add_padding_to_tokenizer(tokenizer)
 
     # resize embeddings if needed (e.g. for LlamaTokenizer)

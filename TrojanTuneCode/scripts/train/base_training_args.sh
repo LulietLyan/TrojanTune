@@ -2,7 +2,40 @@
 
 ID=$RANDOM
 
-export header="torchrun --nproc_per_node 1 --nnodes 1 \
+detect_nproc() {
+    if [[ -n "$TP_NPROC_PER_NODE" ]]; then
+        echo "$TP_NPROC_PER_NODE"
+        return
+    fi
+
+    if [[ -n "$CUDA_VISIBLE_DEVICES" ]]; then
+        IFS=',' read -ra DEVICES <<< "$CUDA_VISIBLE_DEVICES"
+        local count=${#DEVICES[@]}
+        if [[ $count -gt 0 ]]; then
+            echo "$count"
+            return
+        fi
+    fi
+
+    if command -v nvidia-smi >/dev/null 2>&1; then
+        local count
+        count=$(nvidia-smi --list-gpus | wc -l)
+        if [[ $count -gt 0 ]]; then
+            echo "$count"
+            return
+        fi
+    fi
+
+    echo 1
+}
+
+# 使用单机多卡训练（FSDP）
+# 自动检测可用GPU数量，或使用CUDA_VISIBLE_DEVICES指定
+NPROC_PER_NODE=$(detect_nproc)
+NNODES=1
+
+# 使用torchrun启动分布式训练
+export header="torchrun --nproc_per_node ${NPROC_PER_NODE} --nnodes ${NNODES} \
 -m TrojanTuneCode.train.train"
 
 export base_training_args="--do_train True \
@@ -13,7 +46,6 @@ export base_training_args="--do_train True \
 --weight_decay 0.0 \
 --evaluation_strategy no \
 --logging_steps 1 \
---save_strategy no \
 --num_train_epochs 4 \
 --bf16 True \
 --tf32 False \
@@ -23,6 +55,7 @@ export base_training_args="--do_train True \
 --seed 0 \
 --percentage 1.0 \
 --save_strategy epoch \
+--gradient_checkpointing True \
 --lora True \
 --lora_r 128 \
 --lora_alpha 512 \
