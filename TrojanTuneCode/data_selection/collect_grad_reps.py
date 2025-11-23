@@ -126,24 +126,83 @@ def obtain_gradients_with_adam(model, batch, avg, avg_sq):
     loss = model(**batch).loss
     loss.backward()
 
-    # Collect gradients and move them to the same device (for multi-GPU models)
-    # Use the device of the first gradient as the target device
+    # Collect gradients and determine target device (keep on GPU)
+    # For multi-GPU models, collect all gradients and move to a single device
     grads_list = []
     target_device = None
     for n, p in model.named_parameters():
         if p.grad is not None:
             if target_device is None:
                 target_device = p.grad.device
-            grads_list.append(p.grad.view(-1).to(target_device))
+            # Move gradient to target device if it's on a different device
+            grad = p.grad.view(-1)
+            if grad.device != target_device:
+                grad = grad.to(target_device)
+            grads_list.append(grad)
     vectorized_grads = torch.cat(grads_list)
-
-    # Move avg and avg_sq to the same device as vectorized_grads
-    avg = avg.to(target_device)
-    avg_sq = avg_sq.to(target_device)
     
-    updated_avg = beta1 * avg + (1 - beta1) * vectorized_grads
-    updated_avg_sq = beta2 * avg_sq + (1 - beta2) * vectorized_grads ** 2
-    vectorized_grads = updated_avg / torch.sqrt(updated_avg_sq + eps)
+    # Clean up grads_list to free memory
+    del grads_list
+    torch.cuda.empty_cache()
+
+    # Move avg and avg_sq to GPU and compute Adam update
+    # Use larger chunks to improve efficiency and better utilize GPU memory
+    chunk_size = 20000000  # Process in chunks of 20M elements on GPU (larger for better efficiency)
+    n_elements = vectorized_grads.numel()
+    
+    # Try to process all at once if it fits in memory, otherwise use chunks
+    try:
+        # Try to move avg and avg_sq to GPU and compute all at once
+        avg_gpu = avg.to(target_device, non_blocking=True)
+        avg_sq_gpu = avg_sq.to(target_device, non_blocking=True)
+        
+        updated_avg = beta1 * avg_gpu + (1 - beta1) * vectorized_grads
+        grad_sq = vectorized_grads * vectorized_grads
+        updated_avg_sq = beta2 * avg_sq_gpu + (1 - beta2) * grad_sq
+        vectorized_grads = updated_avg / torch.sqrt(updated_avg_sq + eps)
+        
+        # Clean up
+        del avg_gpu, avg_sq_gpu, updated_avg, updated_avg_sq, grad_sq
+        # Move to CPU immediately to free GPU memory
+        vectorized_grads = vectorized_grads.cpu()
+        torch.cuda.empty_cache()
+        
+    except RuntimeError as e:
+        if "out of memory" in str(e).lower() or "CUDA" in str(e):
+            # Fall back to chunked processing
+            torch.cuda.empty_cache()
+            result_chunks = []
+            for i in range(0, n_elements, chunk_size):
+                end_idx = min(i + chunk_size, n_elements)
+                
+                # Get chunks
+                chunk_grads = vectorized_grads[i:end_idx]
+                chunk_avg = avg[i:end_idx].to(target_device, non_blocking=True)
+                chunk_avg_sq = avg_sq[i:end_idx].to(target_device, non_blocking=True)
+                
+                # Compute Adam update for this chunk
+                updated_avg = beta1 * chunk_avg + (1 - beta1) * chunk_grads
+                grad_sq = chunk_grads * chunk_grads
+                updated_avg_sq = beta2 * chunk_avg_sq + (1 - beta2) * grad_sq
+                chunk_result = updated_avg / torch.sqrt(updated_avg_sq + eps)
+                
+                # Keep on GPU for now, only move to CPU if needed
+                result_chunks.append(chunk_result)
+                
+                # Clean up intermediate variables but keep result
+                del chunk_grads, chunk_avg, chunk_avg_sq, updated_avg, updated_avg_sq, grad_sq
+                # Only clear cache every few chunks to reduce overhead
+                if len(result_chunks) % 5 == 0:
+                    torch.cuda.empty_cache()
+            
+            # Concatenate results on GPU, then move to CPU to free GPU memory
+            vectorized_grads = torch.cat(result_chunks)
+            del result_chunks
+            # Move to CPU immediately to free GPU memory and avoid slow transfer during projection
+            vectorized_grads = vectorized_grads.cpu()
+            torch.cuda.empty_cache()
+        else:
+            raise
 
     return vectorized_grads
 
@@ -279,8 +338,8 @@ def collect_grads(dataloader,
     # prepare optimization states
     if gradient_type == "adam":
         assert adam_optimizer_state is not None
-        # first and second moment estimates
-        m, v = prepare_optimizer_state(model, adam_optimizer_state, device)
+        # first and second moment estimates - keep on CPU, move to GPU in chunks during computation
+        m, v = prepare_optimizer_state(model, adam_optimizer_state, torch.device('cpu'))
 
     projector = get_trak_projector(device)
     number_of_params = get_number_of_params(model)
@@ -344,6 +403,8 @@ def collect_grads(dataloader,
         count += 1
 
         if count <= max_index:
+            del batch
+            torch.cuda.empty_cache()
             continue
 
         if gradient_type == "adam":
@@ -362,10 +423,21 @@ def collect_grads(dataloader,
         # add the gradients to the full_grads
         full_grads.append(vectorized_grads)
         model.zero_grad()
+        
+        # Clean up batch and intermediate variables
+        del batch
+        del vectorized_grads
+        
+        # Periodically clear cache to prevent OOM (less frequently to improve speed)
+        if count % 50 == 0:
+            torch.cuda.empty_cache()
 
         if count % project_interval == 0:
+            print(f"[DEBUG] Projecting gradients at count {count}...")
             _project(full_grads, projected_grads)
             full_grads = []
+            torch.cuda.empty_cache()
+            print(f"[DEBUG] Projection completed at count {count}")
 
         if count % save_interval == 0:
             _save(projected_grads, output_dirs)
@@ -465,8 +537,8 @@ def collect_onedata_grad(dataloader,
     # prepare optimization states
     if gradient_type == "adam":
         assert adam_optimizer_state is not None
-        # first and second moment estimates
-        m, v = prepare_optimizer_state(model, adam_optimizer_state, device)
+        # first and second moment estimates - keep on CPU, move to GPU in chunks during computation
+        m, v = prepare_optimizer_state(model, adam_optimizer_state, torch.device('cpu'))
 
     projector = get_trak_projector(device)
     number_of_params = get_number_of_params(model)
